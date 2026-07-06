@@ -1,17 +1,76 @@
-# Terraform Basics
+# terraform-basics
 
-A beginner-friendly Terraform project that provisions a Docker container (Nginx) using Infrastructure as Code.
+A modular Terraform project that provisions a Dockerized Nginx container,
+built using reusable modules and isolated per-environment workspaces (dev/prod).
 
-## What is Infrastructure as Code (IaC)?
+## Project structure
+erraform-basics/
+├── modules/
+│   └── docker-container/     # Reusable module: pulls image + runs container
+│       ├── main.tf
+│       ├── variables.tf
+│       └── outputs.tf
+├── environments/
+│   ├── dev.tfvars            # Dev-specific values (port 8080)
+│   └── prod.tfvars           # Prod-specific values (port 8081)
+├── main.tf                   # Root config: provider + calls the module
+├── variables.tf               # Root input variables (with defaults)
+├── outputs.tf                  # Root outputs (pulled up from the module)
+├── .gitignore                   # Excludes state files and .terraform cache
+└── README.md
+## How it works
 
-Infrastructure as Code means managing and provisioning infrastructure (servers, containers, networks, etc.) using configuration files instead of manually clicking through a UI or running one-off commands.
+- The `docker-container` module contains the actual resources
+  (`docker_image`, `docker_container`) and is reusable across environments.
+- The root `main.tf` calls this module once, passing in variables.
+- `terraform.workspace` is appended to the container name, so `dev` and `prod`
+  get separate containers (`terraform-nginx-dev`, `terraform-nginx-prod`)
+  without duplicating any code.
+- Environment-specific values (image tag, external port) live in
+  `environments/*.tfvars`, keeping the module logic environment-agnostic.
 
-Instead of manually running `docker pull` and `docker run` every time, you write down *what* you want in a file, and a tool (Terraform) figures out *how* to make that happen. This gives you:
+## Prerequisites
 
-- **Consistency** – the same config always produces the same result
-- **Version control** – infrastructure changes can be tracked in Git, just like code
-- **Repeatability** – easy to recreate the same setup on another machine
-- **Documentation** – the config file itself documents your infrastructure
+- Terraform >= 1.5
+- Docker installed and running locally
 
+## Usage
 
+```bash
+terraform init
 
+# Create workspaces (one-time setup)
+terraform workspace new dev
+terraform workspace new prod
+
+# Deploy to dev
+terraform workspace select dev
+terraform apply -var-file="environments/dev.tfvars"
+
+# Deploy to prod
+terraform workspace select prod
+terraform apply -var-file="environments/prod.tfvars"
+```
+
+## Validating state
+
+```bash
+terraform workspace show          # confirm active workspace
+terraform state list              # list resources tracked in this workspace's state
+docker ps                         # confirm containers match state
+```
+
+## Outputs
+
+| Output           | Description                          |
+|-------------------|--------------------------------------|
+| `container_name`  | Name of the created container        |
+| `container_id`    | Docker-assigned container ID         |
+| `access_url`      | URL to access the running app        |
+
+## Notes
+
+- Ports: dev uses `8080`, prod uses `8081` (avoids conflicts with services
+  already bound to port `80` on the host).
+- State files (`terraform.tfstate*`) and `.terraform/` are gitignored —
+  never commit real state, since it can contain resource IDs and sensitive data.
