@@ -1,6 +1,5 @@
 # variables.tf
-# Defines input variables so main.tf isn't hardcoded
-
+# Defines input variables.
 variable "image_name" {
   description = "Docker image to pull and run"
   type        = string

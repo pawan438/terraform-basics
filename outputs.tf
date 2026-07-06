@@ -1,17 +1,16 @@
 # outputs.tf
-# Displays useful info after "terraform apply" finishes
-
+# Pulls outputs up from the module so they show after "terraform apply"
 output "container_name" {
   description = "Name of the created container"
-  value       = docker_container.app_container.name
+  value       = module.app_container.container_name
 }
 
 output "container_id" {
   description = "ID of the created container"
-  value       = docker_container.app_container.id
+  value       = module.app_container.container_id
 }
 
 output "access_url" {
   description = "URL to access the running app"
-  value       = "http://localhost:${var.external_port}"
+  value       = module.app_container.access_url
 }
